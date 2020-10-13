@@ -1,0 +1,44 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+  batch: "true"
+  branches:
+    include:
+      - master
+      - develop
+  paths:
+    exclude:
+      - README.md
+      - azure-pipelines.yml
+pr:
+  autoCancel: "true"
+  branches:
+    include:
+      - master
+      - develop
+  paths:
+    exclude:
+      - README.md
+
+jobs:
+- job: developDepoy
+  steps:
+    - task: UseNode@1
+    - bash: 
+        npm install sfdx-cli --global
+      displayName: Install Salesforce CLI
+    - bash: 
+        sfdx force:auth:jwt:grant --clientid $(salesforceOrgClientId) --jwtkeyfile ./TestProj/buildfiles/server.key --username $(salesforceUserName) --instanceurl $(salesforceInstanceUrl) -a developer
+      displayName: Authorize salesforce org
+    - bash: 
+        sfdx force:source:convert -d ./src
+      displayName: Convert to deploy source
+    - bash: 
+        sfdx force:mdapi:deploy -l RunLocalTests -c -d ./src -u developer -w 10
+      displayName: Run validation on source code
+    - bash: 
+        sfdx force:mdapi:deploy -d ./src -u developer -w 10
+      displayName: Deploy source code to Production
